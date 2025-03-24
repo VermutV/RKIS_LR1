@@ -24,6 +24,7 @@ class UI:
         print("  WASD или стрелки: Перемещение")
         print("  Q: Выход из игры")
         print("  Введите 'debug' в любой момент: Переключение режима отладки")
+        print("  Введите 'more' во время выбора типа карты: Больше врагов")
         print("=" * 60)
         input("\nНажмите Enter для продолжения...")
         
@@ -42,13 +43,14 @@ class UI:
             print("\nВыберите тип карты:")
             print("1. Стандартная карта")
             print("2. Случайная карта с настраиваемым размером")
+            print("Введите 'more' для режима с увеличенным количеством врагов")
             
-            choice = input("Введите ваш выбор (1 или 2): ").strip()
+            choice = input("Введите ваш выбор (1, 2 или more): ").strip()
             
-            if choice in ('1', '2'):
+            if choice in ('1', '2', 'more'):
                 return choice
             else:
-                print("Неверный выбор. Пожалуйста, введите 1 или 2.")
+                print("Неверный выбор. Пожалуйста, введите 1, 2 или more.")
                 
     def get_map_size(self, dimension):
         """
@@ -118,61 +120,15 @@ class UI:
         Returns:
             str: Действие игрока
         """
-        # Получение одиночного нажатия клавиши
-        try:
-            import msvcrt  # Windows
-            action = msvcrt.getch().decode('utf-8').lower()
-        except (ImportError, AttributeError):
-            try:
-                import tty
-                import termios
-                
-                # Сохранение настроек терминала
-                fd = sys.stdin.fileno()
-                old_settings = termios.tcgetattr(fd)
-                try:
-                    # Установка терминала в сырой режим
-                    tty.setraw(fd)
-                    # Чтение одного символа
-                    action = sys.stdin.read(1).lower()
-                finally:
-                    # Восстановление настроек терминала
-                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-            except (ImportError, AttributeError):
-                # Запасной вариант для других платформ
-                action = input("Введите действие (w/a/s/d/q/debug): ").lower()
+        # Упрощенная версия, работающая в любой системе
+        action = input("Введите действие (w/a/s/d/q/debug): ").lower()
         
-        # Обработка клавиш со стрелками (некоторые системы отправляют последовательности с escape-символами)
-        if action == '\x1b':  # Escape-последовательность
-            try:
-                import msvcrt
-                if msvcrt.kbhit():
-                    next_char = msvcrt.getch().decode('utf-8')
-                    if next_char == '[':
-                        arrow_key = msvcrt.getch().decode('utf-8')
-                        if arrow_key == 'A':
-                            return 'w'  # Стрелка вверх
-                        elif arrow_key == 'B':
-                            return 's'  # Стрелка вниз
-                        elif arrow_key == 'C':
-                            return 'd'  # Стрелка вправо
-                        elif arrow_key == 'D':
-                            return 'a'  # Стрелка влево
-            except (ImportError, AttributeError):
-                pass  # Игнорировать, если не поддерживается
-        
-        # Преобразование клавиш со стрелками в wasd при необходимости
-        if action == 'up':
-            return 'w'
-        elif action == 'down':
-            return 's'
-        elif action == 'left':
-            return 'a'
-        elif action == 'right':
-            return 'd'
-            
         # Проверка на команду отладки
         if action.lower() == 'debug':
             return 'debug'
         
-        return action
+        # Принимаем только первый символ введенной строки
+        if action and action[0] in ['w', 'a', 's', 'd', 'q']:
+            return action[0]
+        else:
+            return ' '  # Пробел означает "нет действия"
