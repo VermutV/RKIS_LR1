@@ -40,6 +40,13 @@ class Game:
         # Получить выбор карты от игрока
         map_choice = self.ui.get_map_choice()
         
+        # Проверка на специальные команды
+        more_enemies = False
+        if map_choice.lower() == 'more':
+            more_enemies = True
+            self.message_log.append("Режим с увеличенным количеством врагов активирован!")
+            map_choice = self.ui.get_map_choice()  # Получить выбор карты снова
+        
         if map_choice == '1':
             # Стандартная карта
             self.current_map = generate_standard_map()
@@ -62,7 +69,10 @@ class Game:
         self.player = Player(player_name, player_class, player_x, player_y)
         
         # Добавление врагов на карту
-        self.spawn_enemies(3 + random.randint(0, 2))  # 3-5 врагов
+        if more_enemies:
+            self.spawn_enemies(8 + random.randint(0, 4))  # 8-12 врагов
+        else:
+            self.spawn_enemies(5 + random.randint(0, 3))  # 5-8 врагов
         
         # Добавление сообщений в лог
         self.message_log.append("Игра началась. Используйте WASD или стрелки для перемещения.")
@@ -80,17 +90,64 @@ class Game:
         """Создать указанное количество врагов на случайных позициях на карте."""
         enemy_types = ["Гоблин", "Орк", "Тролль", "Скелет"]
         
-        for _ in range(num_enemies):
-            enemy_type = random.choice(enemy_types)
-            enemy_x, enemy_y = self.find_valid_position()
-            
-            # Убедиться, что враг не создается слишком близко к игроку
-            while abs(enemy_x - self.player.x) < 5 and abs(enemy_y - self.player.y) < 5:
-                enemy_x, enemy_y = self.find_valid_position()
+        # Разделим карту на секторы для более равномерного распределения
+        sectors = [
+            (0, 0, self.map_width // 2, self.map_height // 2),  # верхний левый
+            (self.map_width // 2, 0, self.map_width, self.map_height // 2),  # верхний правый
+            (0, self.map_height // 2, self.map_width // 2, self.map_height),  # нижний левый
+            (self.map_width // 2, self.map_height // 2, self.map_width, self.map_height),  # нижний правый
+        ]
+        
+        # Убедимся, что в каждом секторе будет примерно одинаковое количество врагов
+        enemies_per_sector = max(1, num_enemies // 4)
+        remaining = num_enemies - (enemies_per_sector * 4)
+        
+        enemies_count = []
+        for i in range(4):
+            count = enemies_per_sector
+            if remaining > 0:
+                count += 1
+                remaining -= 1
+            enemies_count.append(count)
+        
+        # Создаем врагов в каждом секторе
+        for i, sector in enumerate(sectors):
+            x1, y1, x2, y2 = sector
+            for _ in range(enemies_count[i]):
+                enemy_type = random.choice(enemy_types)
                 
-            # Создать врага с типом и случайными характеристиками
-            enemy = Enemy(enemy_type, enemy_x, enemy_y)
-            self.enemies.append(enemy)
+                # Пытаемся найти подходящую позицию в текущем секторе
+                attempts = 0
+                while attempts < 50:  # Ограничение попыток, чтобы избежать бесконечного цикла
+                    enemy_x = random.randint(max(1, x1), min(x2 - 1, self.map_width - 2))
+                    enemy_y = random.randint(max(1, y1), min(y2 - 1, self.map_height - 2))
+                    
+                    # Проверка, что позиция валидна и не слишком близко к игроку
+                    if (self.current_map[enemy_y][enemy_x] == ' ' and 
+                        abs(enemy_x - self.player.x) + abs(enemy_y - self.player.y) >= 6):
+                        
+                        # Проверка, что враг не создается рядом с другими врагами
+                        too_close_to_others = False
+                        for other_enemy in self.enemies:
+                            if abs(enemy_x - other_enemy.x) + abs(enemy_y - other_enemy.y) < 3:
+                                too_close_to_others = True
+                                break
+                        
+                        if not too_close_to_others:
+                            enemy = Enemy(enemy_type, enemy_x, enemy_y)
+                            self.enemies.append(enemy)
+                            break
+                    
+                    attempts += 1
+                
+                # Если не удалось найти подходящую позицию в секторе, просто разместим где угодно
+                if attempts >= 50:
+                    enemy_x, enemy_y = self.find_valid_position()
+                    while abs(enemy_x - self.player.x) < 5 and abs(enemy_y - self.player.y) < 5:
+                        enemy_x, enemy_y = self.find_valid_position()
+                    
+                    enemy = Enemy(enemy_type, enemy_x, enemy_y)
+                    self.enemies.append(enemy)
             
     def process_input(self):
         """Обработка ввода игрока."""
