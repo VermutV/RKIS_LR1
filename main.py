@@ -1,28 +1,19 @@
 #!/usr/bin/env python3
-"""
-Main entry point for the roguelike game.
-This file initializes the game and contains the main game loop.
-"""
 from game import Game
 
 
 def main():
-    """
-    Main function that starts the game and contains the main game loop.
-    """
-    # Initialize the game
+    # Запуск
     game = Game()
     
-    # Start the game
+    # Старт
     game.start()
-    
-    # Main game loop
     while game.running:
         game.process_input()
         game.update()
         game.render()
     
-    print("Thanks for playing!")
+    print("Спасибо за тест!")
 
 
 if __name__ == "__main__":
